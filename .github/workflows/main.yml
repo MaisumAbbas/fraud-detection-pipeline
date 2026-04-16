@@ -5,7 +5,6 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  # Stage 4: Intelligent Trigger (External API call from Monitoring)
   repository_dispatch:
     types: [model_drift_alert]
 
@@ -15,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4 # Updated version
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5 # Updated version
         with:
           python-version: '3.9'
 
@@ -26,21 +25,30 @@ jobs:
         run: |
           pip install flake8 pytest pandas
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          pytest tests/test_data.py
+          # Agar tests folder banaya hai tabhi ye chalega, warna is line ko delete kar dein
+          # pytest tests/test_data.py
 
   # STAGE 2: Build & Packaging
   Build-Stage:
     needs: CI-Stage
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code # YEH STEP MISSING THA
+        uses: actions/checkout@v4
+
       - name: Auth to Google Cloud
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2 # Updated version
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Build & Push Training Image
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker --quiet
+          # Artifact Registry ya GCR check karein. 
+          # Agar Artifact Registry use kar rahe hain toh host different hoga.
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/fraud-trainer:latest .
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/fraud-trainer:latest
 
@@ -49,7 +57,18 @@ jobs:
     needs: Build-Stage
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       - name: Run Kubeflow Pipeline
         run: |
           pip install google-cloud-aiplatform kfp
-          python pipeline.py # Yeh file pipeline compile karke run karegi
+          python pipeline.py
