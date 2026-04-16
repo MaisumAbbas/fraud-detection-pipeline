@@ -2,12 +2,12 @@ global:
   scrape_interval: 15s 
 
 rule_files:
-  - "alert_rules.yml" # Alerts ki logic yahan hogi
+  - "alert_rules.yml"
 
 scrape_configs:
   - job_name: 'fraud-detection-api'
     static_configs:
-      - targets: ['localhost:8000'] # Aapka Model API endpoint
+      - targets: ['localhost:8000']
 
   - job_name: 'vertex-ai-metrics'
     static_configs:
