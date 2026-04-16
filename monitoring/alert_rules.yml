@@ -1,0 +1,30 @@
+groups:
+- name: fraud_detection_alerts
+  rules:
+  # A. System-Level Alert
+  - alert: HighLatency
+    expr: http_request_duration_seconds{quantile="0.9"} > 0.5
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "API Latency too high on {{ $labels.instance }}"
+
+  # B. Model-Level Alert (Fraud Recall)
+  - alert: LowFraudRecall
+    expr: model_recall_score < 0.75
+    for: 5m
+    labels:
+      severity: warning
+      trigger: "retrain_pipeline" # Yeh Task 5 ko trigger karega
+    annotations:
+      summary: "Fraud Recall dropped! Automated retraining triggered."
+
+  # C. Data Drift Alert
+  - alert: FeatureDriftDetected
+    expr: data_drift_score > 0.5
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Significant data drift detected in input features."
