@@ -1,0 +1,55 @@
+name: Fraud Detection CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Stage 4: Intelligent Trigger (External API call from Monitoring)
+  repository_dispatch:
+    types: [model_drift_alert]
+
+jobs:
+  # STAGE 1: Continuous Integration
+  CI-Stage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Linting & Unit Testing
+        run: |
+          pip install flake8 pytest pandas
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          pytest tests/test_data.py
+
+  # STAGE 2: Build & Packaging
+  Build-Stage:
+    needs: CI-Stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Build & Push Training Image
+        run: |
+          gcloud auth configure-docker
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/fraud-trainer:latest .
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/fraud-trainer:latest
+
+  # STAGE 3: Continuous Deployment
+  CD-Stage:
+    needs: Build-Stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Kubeflow Pipeline
+        run: |
+          pip install google-cloud-aiplatform kfp
+          python pipeline.py # Yeh file pipeline compile karke run karegi
