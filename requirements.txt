@@ -1,0 +1,9 @@
+kfp==2.4.0
+google-cloud-aiplatform
+pandas
+scikit-learn
+xgboost
+lightgbm
+category_encoders
+pytest
+flake8
